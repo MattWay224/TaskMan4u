@@ -12,143 +12,133 @@ callbacks = CallbackData('callbacks', 'action', 'year', 'month', 'day')
 now = datetime.datetime.now()
 todos = {}
 
-#log_file = open('file.log')
+authorized_users = {}
 
-authorized = False
+# Create the database and tables
+connection = sqlite3.connect('db.sql')
+cursor = connection.cursor()
 
+with open('database.sql', 'r') as sql_file:
+    sql_script = sql_file.read()
+    cursor.executescript(sql_script)
+
+connection.commit()
+connection.close()
 
 @bot.message_handler(commands=['start'])
 def start(message):
     keyboard = types.ReplyKeyboardMarkup(True)
-    button1 = types.KeyboardButton('Add Todo')
-    button2 = types.KeyboardButton('Show todos')
-    button3 = types.KeyboardButton('Help')
-    keyboard.add(button1)
-    keyboard.add(button2)
-    keyboard.add(button3)
-    bot.send_message(message.chat.id, 'Hey, I am TaskMan4u, '
-                                      'Bot for storing your todos, so you will remember about them'
-                     + message.from_user.first_name + '!', reply_markup=keyboard)
-    bot.register_next_step_handler(message, create_database)
+    button1 = types.KeyboardButton('Register')
+    button2 = types.KeyboardButton('Login')
+    keyboard.add(button1, button2)
+    bot.send_message(message.chat.id, 'Hey, I am TaskMan4u, Bot for storing your todos. Please choose Register or Login to continue.', reply_markup=keyboard)
+    bot.register_next_step_handler(message, register_or_login)
 
+def register_or_login(message):
+    choice = message.text.strip().lower()
+    if choice == 'register':
+        bot.send_message(message.chat.id, 'You chose to Register. Please enter your username and password in the format: Username Password')
+        bot.register_next_step_handler(message, register)
+    elif choice == 'login':
+        bot.send_message(message.chat.id, 'You chose to Login. Please enter your username and password in the format: Username Password')
+        bot.register_next_step_handler(message, login)
+    else:
+        bot.send_message(message.chat.id, 'Invalid choice. Please choose Register or Login.')
+        bot.register_next_step_handler(message, register_or_login)
 
-def create_database(message):
-    conn = sqlite3.connect('db.sql')
+def register(message):
+    username_password = message.text.strip().split()
+    if len(username_password) != 2:
+        bot.send_message(message.chat.id, 'Invalid input format. Please enter in the format: Username Password')
+        bot.send_message(message.chat.id, 'Invalid register. Please try again.')
+        return
 
-    conn.cursor().execute('CREATE TABLE IF NOT EXISTS Users (id int auto_increment primary key, '
-                          'name varchar(50), password varchar(50), id_of_user int unique')
-    conn.commit()
-    conn.close()
-
-    bot.send_message(message.chat.id, 'Hey! You need to autorize, write your name here')
-    bot.register_next_step_handler(message, user_name)
-
-
-def user_name(message):
-    name = message.text.strip()
-    bot.send_message(message.char.id, 'Now, print your password')
-    password = message.text.strip()
-    id = message.chat.id
+    username, password = username_password
 
     connection = sqlite3.connect('db.sql')
     cursor = connection.cursor()
 
-    cursor.execute('INSERT INTO Users (name, password, id_of_user) VALUES '
-                   '("%s", "%s")' % (name, password, id))
-    connection.commit()
+    cursor.execute('SELECT id FROM Users WHERE name=?', (username,))
+    user_exists = cursor.fetchone()
+
+    if user_exists:
+        bot.send_message(message.chat.id, 'Username already exists. Please choose a different username.')
+        bot.register_next_step_handler(message, register_or_login)
+    else:
+        cursor.execute('INSERT INTO Users (name, password) VALUES (?, ?)', (username, password))
+        connection.commit()
+        bot.send_message(message.chat.id, f'Register completed. Welcome, {username}!')
+        show_todo_buttons(message)
+
     cursor.close()
     connection.close()
 
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton)
-    return
+def login(message):
+    username_password = message.text.strip().split()
+    if len(username_password) != 2:
+        bot.send_message(message.chat.id, 'Invalid input format. Please enter in the format: Username Password')
+        bot.send_message(message.chat.id, 'Invalid login. Please try again.')
+        return
 
-#todo: provide help info
-@bot.message_handler(commands=['help'])
-def hepling(message):
-    bot.send_message(message.chat.id, '''helpp''')
+    username, password = username_password
 
+    connection = sqlite3.connect('db.sql')
+    cursor = connection.cursor()
 
+    cursor.execute('SELECT id, password FROM Users WHERE name=?', (username,))
+    user_data = cursor.fetchone()
 
-#todo: add deletion
-def delete_task(chat_id, c_date, task):
-    if todos.get(chat_id) is not None:
-        if todos[chat_id].get(c_date) is not None:
-            todos[chat_id] = None
-
-
-
-@bot.message_handler(content_types=['text'])
-def call(message):
-    if message.text.lower() == 'add todo':
-        bot.send_message(message.chat.id, 'Pick date',
-                         reply_markup=calendar.create_calendar(
-                             name=callbacks.prefix,
-                             year=now.year,
-                             month=now.month)
-                         )
-    elif message.text.lower() == 'show todos':
-        if not todos.get(message.chat.id):
-            bot.send_message(message.chat.id, 'No tasks')
+    if user_data:
+        user_id, correct_password = user_data
+        if password == correct_password:
+            authorized_users[message.chat.id] = user_id
+            bot.send_message(message.chat.id, f'Welcome, {username}! You successfully logged in to your account.')
+            show_todo_buttons(message)
         else:
-            bot.send_message(message.chat.id, '''here are you tasks''')
-            for chat_id, dates in todos.items():
-                if chat_id == message.chat.id:
-                    for date, tasks in dates.items():
-                        tasks_text = '\n'.join(f'- {task}' for task in tasks)
-                        text = f'Tasks for {date}:\n{tasks_text}'
-                        keyboard = types.InlineKeyboardMarkup()
-                        for task in tasks:
-                            button = types.InlineKeyboardButton(text=f'{task}', callback_data=f'delete:{date}:{task}')
-                            keyboard.add(button)
-                        bot.send_message(message.chat.id, text, reply_markup=keyboard)
-    elif message.text.lower() == 'help':
-        bot.send_message(message.chat.id, '''helpp''')
+            bot.send_message(message.chat.id, 'Invalid password.')
+            bot.register_next_step_handler(message, register_or_login)
     else:
-        bot.send_message(message.chat.id, "I don't understand...")
+        bot.send_message(message.chat.id, 'Invalid username. Please register or check your username.')
+        bot.register_next_step_handler(message, register_or_login)
 
+    cursor.close()
+    connection.close()
 
-# todo:
-@bot.callback_query_handler(func=lambda call: call.data.startswith('delete:'))
-def delete_callback(call):
-    _, date, task = call.data.split(':')
-    delete_task(call.message.chat.id, date, task)
-    bot.answer_callback_query(call.id, text=f'Task "{task}" on {date} deleted')
-    pass
+def show_todo_buttons(message):
+    keyboard = types.ReplyKeyboardMarkup(True)
+    button1 = types.KeyboardButton('Add Todo')
+    button2 = types.KeyboardButton('Show Todos')
+    button3 = types.KeyboardButton('Remove Todo')
+    keyboard.add(button1, button2, button3)
+    bot.send_message(message.chat.id, 'What would you like to do?', reply_markup=keyboard)
 
+@bot.message_handler(func=lambda message: message.text == 'Add Todo')
+def add_todo_start(message):
+    bot.send_message(message.chat.id, 'Pick a date for your Todo:', reply_markup=calendar.create_calendar(
+        name=callbacks.prefix,
+        year=now.year,
+        month=now.month
+    ))
 
-#handles calendar
 @bot.callback_query_handler(func=lambda call: call.data.startswith(callbacks.prefix))
-def callback_inline(call: types.CallbackQuery):
+def callback_inline(call):
     name, action, year, month, day = call.data.split(callbacks.sep)
     date = calendar.calendar_query_handler(bot=bot, call=call, name=name, action=action, year=year, month=month,
                                            day=day)
     if action == 'DAY':
         c_date = date.strftime("%d.%m.%Y")
-        bot.send_message(chat_id=call.from_user.id, text=f'You chose {c_date}')
-        msg = bot.send_message(chat_id=call.from_user.id, text='What to plan: ')
-        bot.register_next_step_handler(msg, lambda message: add_task(message, chat_id=call.from_user.id, c_date=c_date))
-    elif action == 'CANCEL':
-        bot.send_message(chat_id=call.from_user.id, text='Cancelled')
+        msg = bot.send_message(chat_id=call.from_user.id, text='What todo: ')
+        bot.register_next_step_handler(msg, lambda message: add_todo_save(message, chat_id=call.from_user.id, c_date=c_date))
 
-
-# todo:
-def add_task(message, chat_id, c_date):
-    add_todo(chat_id, c_date, message)
-    text = f'Task successfully added on {c_date}'
-    bot.send_message(chat_id=chat_id, text=text)
-
-
-#todo: add to the database
-def add_todo(chat_id, c_date, message):
-    task = message.text
-    if todos.get(chat_id) is not None:
-        if todos[chat_id].get(c_date) is not None:
-            todos[chat_id][c_date].append(task)
-        else:
-            todos[chat_id][c_date] = [task]
-    else:
-        todos[chat_id] = {c_date: [task]}
-
+def add_todo_save(message, chat_id, c_date):
+    todo = message.text
+    connection = sqlite3.connect('db.sql')
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO Todos (user_id, todo_text) VALUES (?, ?)', (authorized_users.get(chat_id), todo))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    bot.send_message(chat_id=chat_id, text=f'Todo successfully added on {c_date}')
 
 bot.polling(none_stop=True)
+
