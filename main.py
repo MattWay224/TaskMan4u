@@ -35,7 +35,7 @@ def start(message):
 def create_database(message):
     conn = sqlite3.connect('db.sql')
 
-    conn.cursor().execute('CREATE TABLE IF NOT EXISTS Users (id serial primary key, '
+    conn.cursor().execute('CREATE TABLE IF NOT EXISTS Users (id int auto_increment primary key, '
                           'name varchar(50), password varchar(50), id_of_user int unique')
     conn.commit()
     conn.close()
@@ -72,7 +72,10 @@ def hepling(message):
 
 #todo: add deletion
 def delete_task(chat_id, c_date, task):
-    pass
+    if todos.get(chat_id) is not None:
+        if todos[chat_id].get(c_date) is not None:
+            todos[chat_id] = None
+
 
 
 @bot.message_handler(content_types=['text'])
@@ -85,8 +88,20 @@ def call(message):
                              month=now.month)
                          )
     elif message.text.lower() == 'show todos':
-        #todo:
-        bot.send_message(message.chat.id, '''here are you tasks''')
+        if not todos.get(message.chat.id):
+            bot.send_message(message.chat.id, 'No tasks')
+        else:
+            bot.send_message(message.chat.id, '''here are you tasks''')
+            for chat_id, dates in todos.items():
+                if chat_id == message.chat.id:
+                    for date, tasks in dates.items():
+                        tasks_text = '\n'.join(f'- {task}' for task in tasks)
+                        text = f'Tasks for {date}:\n{tasks_text}'
+                        keyboard = types.InlineKeyboardMarkup()
+                        for task in tasks:
+                            button = types.InlineKeyboardButton(text=f'{task}', callback_data=f'delete:{date}:{task}')
+                            keyboard.add(button)
+                        bot.send_message(message.chat.id, text, reply_markup=keyboard)
     elif message.text.lower() == 'help':
         bot.send_message(message.chat.id, '''helpp''')
     else:
@@ -96,9 +111,9 @@ def call(message):
 # todo:
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete:'))
 def delete_callback(call):
-    #_, date, task = call.data.split(':')
-    #delete_task(call.message.chat.id, date, task)
-    #bot.answer_callback_query(call.id, text=f'Task "{task}" on {date} deleted')
+    _, date, task = call.data.split(':')
+    delete_task(call.message.chat.id, date, task)
+    bot.answer_callback_query(call.id, text=f'Task "{task}" on {date} deleted')
     pass
 
 
