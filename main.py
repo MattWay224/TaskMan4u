@@ -1,3 +1,4 @@
+
 import telebot
 from telebot import types
 from telebot_calendar import Calendar, CallbackData, ENGLISH_LANGUAGE
@@ -10,8 +11,8 @@ bot = telebot.TeleBot(token)
 calendar = Calendar(language=ENGLISH_LANGUAGE)
 callbacks = CallbackData('callbacks', 'action', 'year', 'month', 'day')
 now = datetime.datetime.now()
-todos = {}
 
+admin = None
 authorized_users = {}
 
 # Create the database and tables
@@ -70,17 +71,23 @@ def register(message):
 
     username, password = username_password
 
+    if username.contains('admin'):
+        bot.send_message(message.chat.id, 'You have no rights to register new admin')
+        bot.send_message(message.chat.id, 'Invalid register. Please try again.')
+        return
+
     connection = sqlite3.connect('database.sql')
     cursor = connection.cursor()
 
-    cursor.execute('SELECT id FROM Users WHERE name=?', (username,))
+    cursor.execute('SELECT id FROM Users WHERE user_id=?', (message.chat.id,))
     user_exists = cursor.fetchone()
 
     if user_exists:
         bot.send_message(message.chat.id, 'Username already exists. Please choose a different username.')
         bot.register_next_step_handler(message, register_or_login)
     else:
-        cursor.execute('INSERT INTO Users (name, password) VALUES (?, ?)', (username, password))
+        cursor.execute('INSERT INTO Users (user_id, name, password, has_admin_rights) '
+                       'VALUES (?,?,?,?)', (message.chat.id, username, password, False))
         connection.commit()
         bot.send_message(message.chat.id, f'Register completed. Welcome, {username}!')
         show_todo_buttons(message)
@@ -101,7 +108,7 @@ def login(message):
     connection = sqlite3.connect('database.sql')
     cursor = connection.cursor()
 
-    cursor.execute('SELECT id, password FROM Users WHERE name=?', (username,))
+    cursor.execute('SELECT id, password FROM Users WHERE user_id=?', (message.chat.id,))
     user_data = cursor.fetchone()
 
     if user_data:
@@ -148,7 +155,7 @@ def add_todo_save(message, chat_id, c_date):
     todo = message.text
     connection = sqlite3.connect('database.sql')
     cursor = connection.cursor()
-    cursor.execute('INSERT INTO Todos (user_id, todo_text) VALUES (?, ?)', (authorized_users.get(chat_id), todo))
+    cursor.execute('INSERT INTO Todos (user_id, todo_text) VALUES (?, ?)', (message.chat.id, todo))
     connection.commit()
     cursor.close()
     connection.close()
@@ -164,17 +171,13 @@ def call(message):
             month=now.month
         ))
     elif message.text.lower() == 'show todos':
-        if not todos.get(message.chat.id):
-            bot.send_message(message.chat.id, 'No tasks')
-        else:
-            bot.send_message(message.chat.id, '''here are you tasks''')
-            connection = sqlite3.connect('database.sql')
-            cursor = connection.cursor()
-            userid = message.chat.id
-            # todo: Will it work?
-            cursor.execute('SELECT (user_id, todo_text) FROM Todos WHERE user_id == userid')
-            connection.commit()
-            cursor.close()
+        bot.send_message(message.chat.id, '''here are you tasks''')
+        connection = sqlite3.connect('database.sql')
+        cursor = connection.cursor()
+        # todo: Will it work?
+        cursor.execute('SELECT id, user_id, todo_text FROM Users WHERE name=?', (message.chat.id))
+        bot.send_message(message.chat.id, cursor.fetchone())
+        cursor.close()
         connection.close()
     elif message.text.lower() == 'help':
         bot.send_message(message.chat.id, '''I need somebody HELP''')
@@ -184,7 +187,7 @@ def call(message):
 
 # todo: add deletion
 def delete_task(chat_id, c_date, task):
-    #if todos.get(chat_id) is not None:
+    # if todos.get(chat_id) is not None:
     #    if todos[chat_id].get(c_date) is not None:
     #        todos[chat_id] = None
     pass
@@ -192,9 +195,9 @@ def delete_task(chat_id, c_date, task):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete:'))
 def delete_callback(call):
-    #_, date, task = call.data.split(':')
-    #delete_task(call.message.chat.id, date, task)
-    #bot.answer_callback_query(call.id, text=f'Task "{task}" on {date} deleted')
+    # _, date, task = call.data.split(':')
+    # delete_task(call.message.chat.id, date, task)
+    # bot.answer_callback_query(call.id, text=f'Task "{task}" on {date} deleted')
     pass
 
 
