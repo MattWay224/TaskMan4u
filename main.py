@@ -152,46 +152,89 @@ def show_todo_buttons(message):
 
 @bot.message_handler(func=lambda message: message.text == 'Check logs')
 def send_logs(message):
-    with open('logs.txt', 'rb') as log_file:
-        bot.send_document(message.chat.id, log_file, caption='Here are the logs.txt:')
+    user_id = authorized_users.get(message.chat.id)
+    if user_id:
+        connection = sqlite3.connect('db.sql')
+        cursor = connection.cursor()
+        cursor.execute('SELECT name FROM Users WHERE id=?', (user_id,))
+        username = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+
+        if username.lower() == 'admin':
+            with open('logs.txt', 'rb') as log_file:
+                bot.send_document(message.chat.id, log_file, caption='Here are the logs.txt:')
+        else:
+            bot.send_message(message.chat.id, 'You do not have permission to perform this action.')
+    else:
+        bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
         
 @bot.message_handler(func=lambda message: message.text == 'View Users')
 def view_users(message):
-    connection = sqlite3.connect('db.sql')
-    cursor = connection.cursor()
-    cursor.execute('SELECT id, name, password FROM Users')
-    users = cursor.fetchall()
-    cursor.close()
-    connection.close()
+    user_id = authorized_users.get(message.chat.id)
+    if user_id:
+        connection = sqlite3.connect('db.sql')
+        cursor = connection.cursor()
+        cursor.execute('SELECT name FROM Users WHERE id=?', (user_id,))
+        username = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
 
-    users_text = 'User_ID\tUser_Name\tUser_Password\n'
-    for user in users:
-        users_text += f'{user[0]}\t{user[1]}\t{user[2]}\n'
+        if username.lower() == 'admin':
+            connection = sqlite3.connect('db.sql')
+            cursor = connection.cursor()
+            cursor.execute('SELECT id, name, password FROM Users')
+            users = cursor.fetchall()
+            cursor.close()
+            connection.close()
 
-    with open('users.txt', 'w') as users_file:
-        users_file.write(users_text)
+            users_text = 'User_ID\tUser_Name\tUser_Password\n'
+            for user in users:
+                users_text += f'{user[0]}\t{user[1]}\t{user[2]}\n'
 
-    with open('users.txt', 'rb') as users_file:
-        bot.send_document(message.chat.id, users_file, caption='Here are the users:')
-        
+            with open('users.txt', 'w') as users_file:
+                users_file.write(users_text)
+
+            with open('users.txt', 'rb') as users_file:
+                bot.send_document(message.chat.id, users_file, caption='Here are the users:')
+        else:
+            bot.send_message(message.chat.id, 'You do not have permission to perform this action.')
+    else:
+        bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
+
+
 @bot.message_handler(func=lambda message: message.text == 'View Todos')
 def view_todos(message):
-    connection = sqlite3.connect('db.sql')
-    cursor = connection.cursor()
-    cursor.execute('SELECT id, user_id, todo_text, todo_date FROM Todos')
-    todos = cursor.fetchall()
-    cursor.close()
-    connection.close()
+    user_id = authorized_users.get(message.chat.id)
+    if user_id:
+        connection = sqlite3.connect('db.sql')
+        cursor = connection.cursor()
+        cursor.execute('SELECT name FROM Users WHERE id=?', (user_id,))
+        username = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
 
-    todos_text = 'Todos_ID\tUser_ID\tTodos_text\tTodos_date\n'
-    for todo in todos:
-        todos_text += f'{todo[0]}\t{todo[1]}\t{todo[2]}\t{todo[3]}\n'
+        if username.lower() == 'admin':
+            connection = sqlite3.connect('db.sql')
+            cursor = connection.cursor()
+            cursor.execute('SELECT id, user_id, todo_text, todo_date FROM Todos')
+            todos = cursor.fetchall()
+            cursor.close()
+            connection.close()
 
-    with open('todos.txt', 'w') as todos_file:
-        todos_file.write(todos_text)
+            todos_text = 'Todos_ID\tUser_ID\tTodos_text\tTodos_date\n'
+            for todo in todos:
+                todos_text += f'{todo[0]}\t{todo[1]}\t{todo[2]}\t{todo[3]}\n'
 
-    with open('todos.txt', 'rb') as todos_file:
-        bot.send_document(message.chat.id, todos_file, caption='Here are the todos:')
+            with open('todos.txt', 'w') as todos_file:
+                todos_file.write(todos_text)
+
+            with open('todos.txt', 'rb') as todos_file:
+                bot.send_document(message.chat.id, todos_file, caption='Here are the todos:')
+        else:
+            bot.send_message(message.chat.id, 'You do not have permission to perform this action.')
+    else:
+        bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
 
 @bot.message_handler(func=lambda message: message.text == 'Add Todo')
 def add_todo_start(message):
