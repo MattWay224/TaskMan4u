@@ -150,7 +150,7 @@ def show_todo_buttons(message):
     else:
         bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
 
-@bot.message_handler(func=lambda message: message.text == 'Check logs')
+@bot.message_handler(func=lambda message: message.text.lower() == 'check logs')
 def send_logs(message):
     user_id = authorized_users.get(message.chat.id)
     if user_id:
@@ -169,7 +169,7 @@ def send_logs(message):
     else:
         bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
         
-@bot.message_handler(func=lambda message: message.text == 'View Users')
+@bot.message_handler(func=lambda message: message.text.lower() == 'view users')
 def view_users(message):
     user_id = authorized_users.get(message.chat.id)
     if user_id:
@@ -203,7 +203,7 @@ def view_users(message):
         bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
 
 
-@bot.message_handler(func=lambda message: message.text == 'View Todos')
+@bot.message_handler(func=lambda message: message.text.lower() == 'view todos')
 def view_todos(message):
     user_id = authorized_users.get(message.chat.id)
     if user_id:
@@ -236,7 +236,7 @@ def view_todos(message):
     else:
         bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
 
-@bot.message_handler(func=lambda message: message.text == 'Add Todo')
+@bot.message_handler(func=lambda message: message.text.lower() == 'add todo')
 def add_todo_start(message):
     user_id = authorized_users.get(message.chat.id)
     if user_id:
@@ -271,7 +271,7 @@ def add_todo_save(message, chat_id, c_date):
     bot.send_message(chat_id=chat_id, text=f'Todo successfully added on {c_date}')
     log_event('todo_added', user_id=authorized_users.get(chat_id), username=message.from_user.username, todo_id=todo_id, todo_text=todo)
 
-@bot.message_handler(func=lambda message: message.text == 'Show Todos')
+@bot.message_handler(func=lambda message: message.text.lower() == 'show todos')
 def show_todos(message):
     user_id = authorized_users.get(message.chat.id)
     if user_id:
@@ -290,7 +290,7 @@ def show_todos(message):
     else:
         bot.send_message(message.chat.id, 'You are not logged in. Please login first.')
 
-@bot.message_handler(func=lambda message: message.text == 'Remove Todo')
+@bot.message_handler(func=lambda message: message.text.lower() == 'remove todo')
 def remove_todo_start(message):
     bot.send_message(message.chat.id, 'Enter the ID of the todo you want to remove:')
     bot.register_next_step_handler(message, remove_todo)
