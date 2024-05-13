@@ -1,28 +1,30 @@
 # TaskMan4u
-TaskManager via Telegram Bot. Save your todos and bot will help to remember about them!
 
-Installation guide:
-make sure that you using python >= v 3.10
+TaskManager via Telegram Bot. Save your todos and the bot will help to remember them!
 
-'''sudo apt update'''
-'''sudo apt install sqlite3'''
-'''sudo apt install nginx'''
-'''sudo apt install docker'''
-'''pip install telebot telebot_calendar'''
-'''sudo apt install sqlite3'''
+## Installation Guide:
 
-Then you can download the acrive of the project and run main.py using following command:
+Make sure that you are using Python >= 3.10
 
-'''python main.py'''
+```bash
+sudo apt update
+sudo apt install sqlite3
+sudo apt install nginx
+sudo apt install docker
+pip install telebot telebot_calendar
+```
+# Running the Bot:
+1. Download the project archive.
+2. Navigate to the project directory.
+3. Run main.py using the following command:
 
+```python
+python main.py
+```
 
-Development:
-Implemented SQLite for database structure simplicity and ease of integration.
-
-Developed the Telegram bot using the Telebot library in Python.
-
-Configured NGINX as a reverse proxy to handle requests routed to the bot.
-
-Containerized the solution using Docker for portability and scalability.
-
-Developed unit tests to validate critical components' functionality.
+# Development:
+1. Implemented SQLite for database structure simplicity and ease of integration.
+2. Developed the Telegram bot using the Telebot library in Python.
+3. Configured NGINX as a reverse proxy to handle requests routed to the bot.
+4. Containerized the solution using Docker for portability and scalability.
+5. Developed unit tests to validate critical components' functionality.
