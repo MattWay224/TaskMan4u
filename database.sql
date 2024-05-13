@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS Todos (
     FOREIGN KEY(user_id) REFERENCES Users(id)
 );
 
-INSERT INTO Users (id, name, password) VALUES (1, 'admin', 'password');
+INSERT OR IGNORE INTO Users (id, name, password) VALUES (1, 'admin', 'password');
