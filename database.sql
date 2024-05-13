@@ -1,7 +1,9 @@
 CREATE TABLE IF NOT EXISTS Users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(50) UNIQUE,
-    password VARCHAR(50)
+    user_id INTEGER,
+    name VARCHAR(50),
+    password VARCHAR(50),
+    has_admin_rights BOOLEAN
 );
 
 CREATE TABLE IF NOT EXISTS Todos (
