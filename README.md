@@ -21,6 +21,8 @@ pip install telebot telebot_calendar
 ```python
 python main.py
 ```
+# Link
+Bot is availible in the link: https://t.me/TaskManager4u_bot
 
 # Development:
 1. Implemented SQLite for database structure simplicity and ease of integration.
